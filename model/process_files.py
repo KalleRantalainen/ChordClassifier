@@ -128,8 +128,8 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
 
         # Save to .npy files
         base_name = os.path.basename(file_name).replace(".wav", "")
-        save_path = os.path.join(save_dir, f"{base_name}.npy")
-        np.save(save_path, {"features": features, "targets": targets})
+        save_path = os.path.join(save_dir, f"{base_name}.npz")
+        np.savez(save_path, features=features, targets=targets)
 
 def process_data(split):
     """
