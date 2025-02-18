@@ -8,11 +8,6 @@ def read_wav_file(path: str):
     y, sr = librosa.load(path, sr=None)
     return sr, y
 
-
-def serialize_data():
-    #TODO: Pickle
-    pass
-
 def get_chords_and_times(file_name):
     """
     Get all the chords and chord timestaps for a song from the json file.
