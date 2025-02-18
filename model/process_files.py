@@ -131,10 +131,6 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
         save_path = os.path.join(save_dir, f"{base_name}.npy")
         np.save(save_path, {"features": features, "targets": targets})
 
-
-
-
-
 def process_data(split):
     """
     Calculate the feaures from the data.
