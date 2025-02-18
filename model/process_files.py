@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 from tqdm import tqdm
+from pprint import pprint
 
-from file_io import get_all_file_names, read_wav_file, get_chords_and_times
+from file_io import get_all_file_names, read_wav_file, get_chords_and_times, get_common_chords
 
 def calculate_const_Q(y, sr):
     cqt = np.abs(librosa.cqt(y, sr=sr, hop_length=256, bins_per_octave=24, n_bins=84))
@@ -29,7 +30,7 @@ def calculate_mel_spectro():
     # TODO: laske mel spectrogrammi, tarvitaanko?
     pass
 
-def save_features_and_targets(qspec, y, sr, file_name, split):
+def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
     # Number of bins for each feature. 6 bins corresponds to approx 100ms
     number_of_bins = 6
     # Total number of bins in the spectrogram
@@ -73,8 +74,8 @@ def save_features_and_targets(qspec, y, sr, file_name, split):
         # Start and end times for the current bins
         start_sec = i * bin_len_seconds
         end_sec = i * bin_len_seconds
-        # Exract current bins from the spectrogram
-        current_bins = qspec[start_idx:end_idx]
+        # Exract current temporal bins from the spectrogram
+        current_bins = qspec[:, start_idx:end_idx]
 
         # Placeholder for the active chord
         active_chord = None
@@ -107,23 +108,28 @@ def save_features_and_targets(qspec, y, sr, file_name, split):
             # Do not write any features
             pass
         else:
-            # Active chord was found -> create feature/target pair file.
-            features.append(current_bins)
-            targets.append(active_chord)
-    
+            # Song has an active chord at this time
+            if active_chord in common_chords:
+                # Chord is included in all splits of the data, so we can include this
+                one_hot_target = one_hot_encode_target(active_chord, common_chords)
+                features.append(current_bins)
+                targets.append(one_hot_target)
+
     # Convert the targets and features to np arrays
     features = np.array(features)
     targets = np.array(targets)
 
-    # Check if the save_dir exsist, otherwise create a folder for the
-    # .npy files.
-    save_dir = f"../data/{split}_serialized"
-    os.makedirs(save_dir, exist_ok=True)
+    # Only save the features and targets if there is data.
+    if features.size > 0 and targets.size > 0:
+        # Check if the save_dir exsist, otherwise create a folder for the
+        # .npy files.
+        save_dir = f"../data/{split}_serialized"
+        os.makedirs(save_dir, exist_ok=True)
 
-    # Save to .npy files
-    base_name = os.path.basename(file_name).replace(".wav", "")
-    save_path = os.path.join(save_dir, f"{base_name}.npy")
-    np.save(save_path, {"features": features, "targets": targets})
+        # Save to .npy files
+        base_name = os.path.basename(file_name).replace(".wav", "")
+        save_path = os.path.join(save_dir, f"{base_name}.npy")
+        np.save(save_path, {"features": features, "targets": targets})
 
 
 
@@ -137,6 +143,8 @@ def process_data(split):
     3. Repeat for every file
     """
     file_names = get_all_file_names(split)
+    # Get chords that are present in every split of the data
+    all_common_chords = get_common_chords()
     # Use progress bar to keep track of the serialization
     with tqdm(total=len(file_names), desc=f"Processing {split} data", unit="file") as pbar:
         for idx, file_name in enumerate(file_names):
@@ -144,11 +152,23 @@ def process_data(split):
             if sr != 16000:
                 continue
             constq = calculate_const_Q(y, sr)
-            save_features_and_targets(constq, y, sr, file_name, split)
+            save_features_and_targets(constq, y, sr, file_name, split, all_common_chords)
             pbar.update(1)
 
 # For creating the serialized (npy) features and targets from the data
 def main():
+
+    # One .npy file will contain all the feature/target pairs for one song.
+    # Each feature/target pair is in following format:
+    # feature:
+    # [
+    #   [freq1_at_time1, freq1_at_time2, freq1_at_time3, freq1_at_time4, freq1_at_time5, freq1_at_time6],
+    #   [freq2_at_time1, freq2_at_time2, freq2_at_time3, freq2_at_time4, freq2_at_time5, freq2_at_time6],
+    #   ...
+    #   [freq84_at_time1, freq84_at_time2, freq84_at_time3, freq84_at_time4, freq84_at_time5, freq84_at_time6]
+    # ]
+    # target:
+    # [0,0,0,1,0,0,...n], where n is the amount of common chords
 
     # Process the dataset -> write features/targets into .npy files
     process_data("train")
