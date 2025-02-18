@@ -6,6 +6,8 @@
 import librosa.display
 import matplotlib.pyplot as plt
 import numpy as np
+import os
+from tqdm import tqdm
 
 from file_io import get_all_file_names, read_wav_file, get_chords_and_times
 
@@ -27,7 +29,7 @@ def calculate_mel_spectro():
     # TODO: laske mel spectrogrammi, tarvitaanko?
     pass
 
-def calculate_features(qspec, y, sr, file_name):
+def save_features_and_targets(qspec, y, sr, file_name, split):
     # Number of bins for each feature. 6 bins corresponds to approx 100ms
     number_of_bins = 6
     # Total number of bins in the spectrogram
@@ -47,7 +49,7 @@ def calculate_features(qspec, y, sr, file_name):
     chord_times.insert(0, 0)
     chord_times.append(y_len_seconds)
     # Add None to the start and end of the chords
-    chords(0, None)
+    chords.insert(0, None)
     chords.append(None)
 
     # If the song has signle E chord, the format is now for example
@@ -55,6 +57,10 @@ def calculate_features(qspec, y, sr, file_name):
     # chord_times = [0, 0.5, 10]
     # So the is nothing from 0 to 0.5 seconds, then there is E from 0.5 to 10 seconds
     # and nothing after that since the song has ended
+
+    # Save the features and targets of a single song into the features and targets lists
+    features = []
+    targets = []
 
     if chords == None or chord_times == None:
         return
@@ -102,7 +108,23 @@ def calculate_features(qspec, y, sr, file_name):
             pass
         else:
             # Active chord was found -> create feature/target pair file.
-            pass
+            features.append(current_bins)
+            targets.append(active_chord)
+    
+    # Convert the targets and features to np arrays
+    features = np.array(features)
+    targets = np.array(targets)
+
+    # Check if the save_dir exsist, otherwise create a folder for the
+    # .npy files.
+    save_dir = f"../data/{split}_serialized"
+    os.makedirs(save_dir, exist_ok=True)
+
+    # Save to .npy files
+    base_name = os.path.basename(file_name).replace(".wav", "")
+    save_path = os.path.join(save_dir, f"{base_name}.npy")
+    np.save(save_path, {"features": features, "targets": targets})
+
 
 
 
@@ -115,28 +137,23 @@ def process_data(split):
     3. Repeat for every file
     """
     file_names = get_all_file_names(split)
-    for idx, file_name in enumerate(file_names):
-        sr, y = read_wav_file(file_name)
-        if sr != 16000:
-            continue
-        constq = calculate_const_Q(y, sr)
-        bins = constq.shape[1]
-        samples_per_bin = len(y) / bins
-        print(file_name)
-        print("sr:", sr)
-        print("constQ shape:", constq.shape)
-        print("Length of one bin:", samples_per_bin/sr*6, "s")
-        plt.figure(figsize=(10, 4))
-        librosa.display.specshow(constq, sr=sr, x_axis="time", y_axis="cqt_note")
-        plt.colorbar(label="dB")
-        plt.title("Constant-Q Transform (CQT) Spectrogram")
-        plt.show()
-        break
+    # Use progress bar to keep track of the serialization
+    with tqdm(total=len(file_names), desc=f"Processing {split} data", unit="file") as pbar:
+        for idx, file_name in enumerate(file_names):
+            sr, y = read_wav_file(file_name)
+            if sr != 16000:
+                continue
+            constq = calculate_const_Q(y, sr)
+            save_features_and_targets(constq, y, sr, file_name, split)
+            pbar.update(1)
 
-# For testing
+# For creating the serialized (npy) features and targets from the data
 def main():
 
+    # Process the dataset -> write features/targets into .npy files
+    process_data("train")
     process_data("test")
+    process_data("validation")
 
 if __name__ == "__main__":
     main()
