@@ -4,11 +4,12 @@ import os
 import numpy as np
 
 class ChordDataset(Dataset):
-    def __init__(self, root, split):
+    def __init__(self, root, split, transform=None):
         self.root_dir = root
         self.split = split
         self.features = []
         self.targets = []
+        self.transform = transform # Transform function -> normalizer
         # Load the data
         self.load_data()
 
@@ -39,7 +40,16 @@ class ChordDataset(Dataset):
         # Return feature - target pairs
         if len(self.features) - 1 < idx or len(self.targets) - 1 < idx:
             raise IndexError("Invalid index for features and targets")
-        return self.features[idx], self.targets[idx]
+        
+        feature = self.features[idx]
+        target = self.targets[idx]
+
+        # Apply transform if provided
+        if self.transform:
+            feature = self.transform(feature)
+
+        return feature, target
+        #return self.features[idx], self.targets[idx]
     
 # For testing purposes
 def main():
