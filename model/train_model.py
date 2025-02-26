@@ -4,6 +4,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 from copy import deepcopy
+from torchvision import transforms
+from data_visualization import plot_confusion_matrix
 
 from dataset import ChordDataset
 from cnn import ChordCNN
@@ -14,8 +16,8 @@ def train(train_ds, test_ds, val_ds):
     print(f'Process on {device}', end='\n\n')
 
     # Define some hyper params for training
-    epochs = 10
-    learning_rate = 1e-3
+    epochs = 20
+    learning_rate = 1e-4
     batch_size = 32
 
     # Define the CNN model
@@ -31,9 +33,9 @@ def train(train_ds, test_ds, val_ds):
     loss_function = torch.nn.CrossEntropyLoss()
 
     # Define the data loaders
-    train_loader = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True)
-    validation_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=True)
+    train_loader = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=False)
+    validation_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(dataset=test_ds, batch_size=batch_size, shuffle=False)
 
     # Define early stopping parameters
     lowest_validation_loss = 1e10
@@ -61,7 +63,7 @@ def train(train_ds, test_ds, val_ds):
             optimizer.zero_grad()
 
             # Get the batches.
-            x, y = batch
+            x, y, _ = batch
 
             # Give them to the appropriate device.
             x = x.to(device)
@@ -95,7 +97,7 @@ def train(train_ds, test_ds, val_ds):
             # For every batch of our validation data.
             for batch in valid_loader_tqdm:
                 # Get the batch
-                x_val, y_val = batch
+                x_val, y_val, _ = batch
 
                 # Pass the data to the appropriate device.
                 x_val = x_val.to(device)
@@ -146,7 +148,7 @@ def train(train_ds, test_ds, val_ds):
                 model.eval()
                 with torch.no_grad():
                     for batch in test_loader:
-                        x_test, y_test = batch
+                        x_test, y_test, _ = batch
 
                         # Pass the data to the appropriate device.
                         x_test = x_test.to(device)
@@ -175,19 +177,27 @@ def train(train_ds, test_ds, val_ds):
                 accuracy = np.mean(correct_predictions)
                 print("Amount of correct predictions:", np.sum(correct_predictions))
                 print("Test accuracy:", accuracy)
+
+                # Plot confusiuon matrix from the predictions.
+                plot_confusion_matrix(labels_test, predictions_test, test_loader)
                 break
 
 # Train the model
 def main():
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5], std=[0.2])  # Apply normalization
+    ])
     
     root = "../data"
     train_split = "/train_serialized"
     test_split = "/test_serialized"
     validation_split = "/validation_serialized"
 
-    train_dataset = ChordDataset(root, train_split)
-    test_dataset = ChordDataset(root, test_split)
-    validation_dataset = ChordDataset(root, validation_split)
+    train_dataset = ChordDataset(root, train_split, transform=transform)
+    test_dataset = ChordDataset(root, test_split, transform=transform)
+    validation_dataset = ChordDataset(root, validation_split, transform=transform)
 
     train(train_dataset, test_dataset, validation_dataset)
     

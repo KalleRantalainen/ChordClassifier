@@ -87,17 +87,12 @@ def get_common_chords():
     """
     Get chords that are present in all of the data splits.
     """
-    _, train_chords, test_chords, validation_chords = get_all_chords()
-
-    val_chords_in_train = []
-    for val_ch in validation_chords:
-        if val_ch in train_chords:
-            val_chords_in_train.append(val_ch)
+    all_chords, train_chords, test_chords, validation_chords = get_all_chords()
 
     common_chords = []
-    for test_ch in test_chords:
-        if test_ch in val_chords_in_train:
-            common_chords.append(test_ch)
+    for chord in all_chords:
+        if chord in train_chords and chord in test_chords and chord in validation_chords:
+            common_chords.append(chord)
 
     return common_chords
 

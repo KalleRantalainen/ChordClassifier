@@ -13,7 +13,7 @@ from pprint import pprint
 from file_io import get_all_file_names, read_wav_file, get_chords_and_times, get_common_chords
 
 def calculate_const_Q(y, sr):
-    cqt = np.abs(librosa.cqt(y, sr=sr, hop_length=256, bins_per_octave=24, n_bins=84))
+    cqt = np.abs(librosa.cqt(y, sr=sr, hop_length=256, bins_per_octave=24, n_bins=84)) # hop_length=128
     cqt_db = librosa.amplitude_to_db(cqt, ref=np.max)
     return cqt_db
 
@@ -41,9 +41,12 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
     y_len_seconds = len(y) / sr
     # How long each bin is in seconds
     bin_len_seconds = y_len_seconds / qspec_bins
+    # How long one feature (6bins is)
+    feature_len_seconds = number_of_bins * bin_len_seconds
 
     # Convert the name from "../data/test/name.wav" to "test/name.wav"
     json_format_file_name = file_name.replace("../data/", "")
+
     # Get the chords and their timestamps from the file
     chords, chord_times = get_chords_and_times(json_format_file_name)
     # Add start and end to the chord times
@@ -61,6 +64,7 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
 
     # Save the features and targets of a single song into the features and targets lists
     features = []
+    dataset_chords = []
     targets = []
 
     if chords == None or chord_times == None:
@@ -72,8 +76,8 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
         start_idx = i * number_of_bins
         end_idx = (i + 1) * number_of_bins
         # Start and end times for the current bins
-        start_sec = i * bin_len_seconds
-        end_sec = i * bin_len_seconds
+        start_sec = i * feature_len_seconds
+        end_sec = (i + 1) * feature_len_seconds
         # Exract current temporal bins from the spectrogram
         current_bins = qspec[:, start_idx:end_idx]
 
@@ -84,8 +88,9 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
             if chord_times[j] <= start_sec and chord_times[j + 1] >= end_sec:
                 # Single chord active in this window
                 active_chord = chords[j]
+                break
             # There are two chords present during this window
-            else:
+            elif start_sec < chord_times[j + 1] and end_sec > chord_times[j + 1]:
                 # Overlap starts when the current chord ends
                 overlap_start = chord_times[j + 1]
                 # Overlap ends when the current window ends
@@ -100,9 +105,8 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
                     # If the overlap is less than half of the window duration, the active chord
                     # is the current chord
                     active_chord = chords[j]
-            # Active chord found, break the loop
-            break
-
+                # Active chord found, break the loop
+                break
         # Handle case where no chord is active
         if active_chord is None:
             # Do not write any features
@@ -114,10 +118,12 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
                 one_hot_target = one_hot_encode_target(active_chord, common_chords)
                 features.append(current_bins)
                 targets.append(one_hot_target)
+                dataset_chords.append(active_chord)
 
     # Convert the targets and features to np arrays
     features = np.array(features)
     targets = np.array(targets)
+    dataset_chords = np.array(dataset_chords)
 
     # Only save the features and targets if there is data.
     if features.size > 0 and targets.size > 0:
@@ -129,7 +135,7 @@ def save_features_and_targets(qspec, y, sr, file_name, split, common_chords):
         # Save to .npy files
         base_name = os.path.basename(file_name).replace(".wav", "")
         save_path = os.path.join(save_dir, f"{base_name}.npz")
-        np.savez(save_path, features=features, targets=targets)
+        np.savez(save_path, features=features, targets=targets, chords=dataset_chords)
 
 def process_data(split):
     """
