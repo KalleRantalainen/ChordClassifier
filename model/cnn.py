@@ -52,7 +52,7 @@ class ChordCNN(nn.Module):
         # cnn expects shape (channels, batch_size, freq_bands, time_steps)
         # -> need to unsqueeze before passing the data
         #print("X shape before:", x.shape)
-        #x = x.unsqueeze(1)
+        x = x.unsqueeze(1)
         #print("X shape after unsqueeze:", x.shape)
         x = self.block_1(x)
         #print("X shape after block 1:", x.shape)

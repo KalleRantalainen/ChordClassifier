@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 from copy import deepcopy
 from torchvision import transforms
+from data_visualization import plot_confusion_matrix
 
 from dataset import ChordDataset
 from cnn import ChordCNN
@@ -34,7 +35,7 @@ def train(train_ds, test_ds, val_ds):
     # Define the data loaders
     train_loader = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=False)
     validation_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(dataset=test_ds, batch_size=batch_size, shuffle=False)
 
     # Define early stopping parameters
     lowest_validation_loss = 1e10
@@ -62,7 +63,7 @@ def train(train_ds, test_ds, val_ds):
             optimizer.zero_grad()
 
             # Get the batches.
-            x, y = batch
+            x, y, _ = batch
 
             # Give them to the appropriate device.
             x = x.to(device)
@@ -96,7 +97,7 @@ def train(train_ds, test_ds, val_ds):
             # For every batch of our validation data.
             for batch in valid_loader_tqdm:
                 # Get the batch
-                x_val, y_val = batch
+                x_val, y_val, _ = batch
 
                 # Pass the data to the appropriate device.
                 x_val = x_val.to(device)
@@ -147,7 +148,7 @@ def train(train_ds, test_ds, val_ds):
                 model.eval()
                 with torch.no_grad():
                     for batch in test_loader:
-                        x_test, y_test = batch
+                        x_test, y_test, _ = batch
 
                         # Pass the data to the appropriate device.
                         x_test = x_test.to(device)
@@ -176,6 +177,9 @@ def train(train_ds, test_ds, val_ds):
                 accuracy = np.mean(correct_predictions)
                 print("Amount of correct predictions:", np.sum(correct_predictions))
                 print("Test accuracy:", accuracy)
+
+                # Plot confusiuon matrix from the predictions.
+                plot_confusion_matrix(labels_test, predictions_test, test_loader)
                 break
 
 # Train the model

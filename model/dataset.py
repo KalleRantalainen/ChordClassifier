@@ -3,12 +3,16 @@ from torch.utils.data import DataLoader
 import os
 import numpy as np
 
+from file_io import get_all_chords, get_common_chords
+from data_visualization import plot_chord_distribution
+
 class ChordDataset(Dataset):
     def __init__(self, root, split, transform=None):
         self.root_dir = root
         self.split = split
         self.features = []
         self.targets = []
+        self.chords = []
         self.transform = transform # Transform function -> normalizer
         # Load the data
         self.load_data()
@@ -28,10 +32,12 @@ class ChordDataset(Dataset):
             # Extract features and targets from the loaded data
             features = data['features']
             targets = data['targets']
+            chords = data['chords']
             
             # Extend the features and targets lists
             self.features.extend(features)
             self.targets.extend(targets)
+            self.chords.extend(chords)
 
     def __len__(self):
         return len(self.features)
@@ -43,14 +49,15 @@ class ChordDataset(Dataset):
         
         feature = self.features[idx]
         target = self.targets[idx]
+        chord = self.chords[idx]
 
         # Apply transform if provided
-        if self.transform:
-            feature = self.transform(feature)
+        #if self.transform:
+        #    feature = self.transform(feature)
 
-        return feature, target
+        return feature, target, chord
         #return self.features[idx], self.targets[idx]
-    
+
 # For testing purposes
 def main():
     
@@ -70,15 +77,31 @@ def main():
 
     # Create a loader
     train_loader = DataLoader(dataset=test_dataset, batch_size=32, shuffle=True)
-    
+    print("Test dataset 0:", test_dataset[0])
+    print("Test dataset 0[0]:", test_dataset[0])
+    print("Test dataset 0[1]:", test_dataset[1])
+    print("Test dataset 0[2]:", test_dataset[2])
     # Test if the testdata is in valid form
     for batch in train_loader:
-        features, target = batch
+        features, target, chord = batch
         # Expected shape for features is (batch_size, n_freq_bands, n_time_bands)
         # Expected shape for target is (batch_size, n_common_chords)
         print("feature shape:", features.shape)
         print("target shape :", target.shape)
+        print("Chord:", chord)
         break
+    
+    # allc, trc, tec, vac = get_all_chords()
+    # print("All chords in the whole dataset:", allc)
+    # print("All chords in the training data:", trc)
+    # print("All chords in the testing data:", tec)
+    # print("All chords in the val data:", vac)
+    # print("ALL COMMON CHORDS:", get_common_chords())
+
+    # Plot bar charts of chord distribution in the data splits
+    plot_chord_distribution(train_dataset, "Train", "skyblue")
+    plot_chord_distribution(validation_dataset, "Validation", "lightcoral")
+    plot_chord_distribution(test_dataset, "Test", "limegreen")
     
 if __name__ == "__main__":
     main()
