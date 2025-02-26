@@ -33,8 +33,8 @@ def train(train_ds, test_ds, val_ds):
     loss_function = torch.nn.CrossEntropyLoss()
 
     # Define the data loaders
-    train_loader = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=False)
-    validation_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(dataset=train_ds, batch_size=batch_size, shuffle=True)
+    validation_loader = DataLoader(dataset=val_ds, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset=test_ds, batch_size=batch_size, shuffle=False)
 
     # Define early stopping parameters

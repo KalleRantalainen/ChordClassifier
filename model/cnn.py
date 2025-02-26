@@ -12,16 +12,16 @@ class ChordCNN(nn.Module):
             ReLU(),
             #BatchNorm2d(32),
             #MaxPool2d(kernel_size=(3,1), stride=(3,1)),
-            Dropout2d(p=0.4)
+            Dropout2d(p=0.5)
         )
 
         # Block 2
         self.block_2 = Sequential(
             Conv2d(in_channels=32, out_channels=64, kernel_size=(26,1)),
             ReLU(),
-            #BatchNorm2d(64),
+            BatchNorm2d(64),
             #MaxPool2d(kernel_size=(3,1), stride=(3,1)),
-            Dropout2d(p=0.4)
+            Dropout2d(p=0.5)
         )
 
         # Block 3
@@ -30,7 +30,7 @@ class ChordCNN(nn.Module):
             ReLU(),
             BatchNorm2d(128),
             #MaxPool2d(kernel_size=(3,1), stride=(3,1)),
-            Dropout2d(p=0.4)
+            Dropout2d(p=0.5)
         )
 
         # Block 4
@@ -42,10 +42,10 @@ class ChordCNN(nn.Module):
         #     Dropout2d(p=0.2)
         # )
 
-        self.fc1 = Linear(6912, 512)
+        self.fc1 = Linear(6912, 512) #6912
         self.fc2 = Linear(512, num_chords)
 
-        self.dropout = Dropout(p=0.2)
+        self.dropout = Dropout(p=0.5)
 
     def forward(self, x):
         # Data is in shape (batch_size, freq_bands, time_steps), the 
