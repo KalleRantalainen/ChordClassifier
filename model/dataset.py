@@ -17,6 +17,17 @@ class ChordDataset(Dataset):
         # Load the data
         self.load_data()
 
+    def _normalize_features(self, feature):
+        # Min max scaling to normalize the features between 0 and 1
+        min_val = np.min(feature)
+        max_val = np.max(feature)
+        
+        # Avoid division by zero
+        if max_val - min_val == 0:
+            return feature
+        
+        return (feature - min_val) / (max_val - min_val)
+
     def load_data(self):
         datapath = self.root_dir + self.split
         # Store all the files names into a list
@@ -52,8 +63,7 @@ class ChordDataset(Dataset):
         chord = self.chords[idx]
 
         # Apply transform if provided
-        #if self.transform:
-        #    feature = self.transform(feature)
+        feature = self._normalize_features(feature)
 
         return feature, target, chord
         #return self.features[idx], self.targets[idx]
@@ -77,10 +87,7 @@ def main():
 
     # Create a loader
     train_loader = DataLoader(dataset=test_dataset, batch_size=32, shuffle=True)
-    print("Test dataset 0:", test_dataset[0])
-    print("Test dataset 0[0]:", test_dataset[0])
-    print("Test dataset 0[1]:", test_dataset[1])
-    print("Test dataset 0[2]:", test_dataset[2])
+
     # Test if the testdata is in valid form
     for batch in train_loader:
         features, target, chord = batch

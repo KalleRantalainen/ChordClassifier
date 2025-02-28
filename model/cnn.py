@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.nn import Conv2d, MaxPool2d, BatchNorm2d, ReLU, Linear, Sequential, Dropout2d, Dropout
 
 class ChordCNN(nn.Module):
-    def __init__(self, num_chords=70):
+    def __init__(self, num_chords=51):
         super(ChordCNN, self).__init__()
 
         # Block 1
@@ -42,8 +42,10 @@ class ChordCNN(nn.Module):
         #     Dropout2d(p=0.2)
         # )
 
-        self.fc1 = Linear(6912, 512) #6912
-        self.fc2 = Linear(512, num_chords)
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(2)
+
+        self.fc1 = Linear(512, 128) #6912, 512
+        self.fc2 = Linear(128, num_chords)
 
         self.dropout = Dropout(p=0.5)
 
@@ -62,7 +64,8 @@ class ChordCNN(nn.Module):
         #print("X shape after block 3:", x.shape)
         #x = self.block_4(x)
         #print("X shape after block 4:", x.shape)
-
+        x = self.global_avg_pool(x)
+        #print("X after pool:", x)
         x = x.view(x.size(0), -1)
         #print("X after reshape:", x.shape)
 

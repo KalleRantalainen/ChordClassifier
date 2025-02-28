@@ -4,6 +4,14 @@
 import librosa
 import json
 
+# Examining the data, we found out that these chords are pretty rare in the data. So
+# the most common chord in the set was C with about 3700 occurences. Now All the chords 
+# in the RARE_CHORDS appear less than 10% of this, so they have under 370 appearances in the
+# training data. We want to process the files again and discard these chords. This will
+# lead to better class balance and improve the model accuracy.
+RARE_CHORDS = ["C#m7", "C#maj7", "Dm7b5/C", "F/C", "Ebm7", "E6", "F#6", "B7", "Em7b5/D",
+               "Bb7", "F#maj7", "C#/G#", "C/D", "F#/C#", "Em6", "Abm6", "F#7", "Eb/F", "Am6"]
+
 def read_wav_file(path: str):
     y, sr = librosa.load(path, sr=None)
     return sr, y
@@ -94,7 +102,11 @@ def get_common_chords():
         if chord in train_chords and chord in test_chords and chord in validation_chords:
             common_chords.append(chord)
 
-    return common_chords
+    filtered_common_chords = []
+    for cchord in common_chords:
+        if cchord not in RARE_CHORDS:
+            filtered_common_chords.append(cchord)
+    return filtered_common_chords
 
 # For testing
 def main():
