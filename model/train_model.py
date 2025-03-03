@@ -184,20 +184,15 @@ def train(train_ds, test_ds, val_ds):
 
 # Train the model
 def main():
-
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5], std=[0.2])  # Apply normalization
-    ])
     
     root = "../data"
     train_split = "/train_serialized"
     test_split = "/test_serialized"
     validation_split = "/validation_serialized"
 
-    train_dataset = ChordDataset(root, train_split, transform=transform)
-    test_dataset = ChordDataset(root, test_split, transform=transform)
-    validation_dataset = ChordDataset(root, validation_split, transform=transform)
+    train_dataset = ChordDataset(root, train_split)
+    test_dataset = ChordDataset(root, test_split)
+    validation_dataset = ChordDataset(root, validation_split)
 
     train(train_dataset, test_dataset, validation_dataset)
     
