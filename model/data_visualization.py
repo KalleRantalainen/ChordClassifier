@@ -73,6 +73,9 @@ def plot_confusion_matrix(labels_test, predictions_test, test_loader):
     # Compute confusion matrix
     cm_raw = confusion_matrix(labels_test, predictions_test)
 
+    # Compute accuracy for each chord separately
+    per_class_accuracy = cm_raw.diagonal() / cm_raw.sum(axis=1)
+
     # Normalize by row (i.e., per-class percentages)
     cm_norm = cm_raw.astype('float') / cm_raw.sum(axis=1, keepdims=True)
     cm_norm = np.nan_to_num(cm_norm)  # Handle division by zero for empty rows
@@ -100,6 +103,9 @@ def plot_confusion_matrix(labels_test, predictions_test, test_loader):
     axes[1].set_ylabel("True Chord")
     axes[1].tick_params(axis="x", rotation=90)
     axes[1].tick_params(axis="y", rotation=0)
+
+    #for i, chord in enumerate(chord_list):
+    #    print(f"Accuracy for {chord}: {per_class_accuracy[i]:.2f}")
 
     # Adjust layout
     plt.tight_layout()

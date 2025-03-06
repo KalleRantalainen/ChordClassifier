@@ -5,8 +5,9 @@ from tqdm import tqdm
 import numpy as np
 from copy import deepcopy
 from torchvision import transforms
-from data_visualization import plot_confusion_matrix
+import torch.nn.functional as F
 
+from data_visualization import plot_confusion_matrix
 from dataset import ChordDataset
 from cnn import ChordCNN
 
@@ -145,6 +146,7 @@ def train(train_ds, test_ds, val_ds):
                 testing_loss = []
                 labels_test = []
                 predictions_test = []
+                thresholded_predictions_test = [] 
                 model.eval()
                 with torch.no_grad():
                     for batch in test_loader:
@@ -156,14 +158,22 @@ def train(train_ds, test_ds, val_ds):
 
                         # make the prediction
                         y_hat = model(x_test)
+                        
+                        # Apply the softmax to get probabilities
+                        y_prob = F.softmax(y_hat, dim=-1)
 
                         # Calculate the loss.
                         loss = loss_function(y_hat, y_test)
                         testing_loss.append(loss.item())
 
+                        # Calculate the predictions with a 50% threshold.
+                        max_probs, thresholded_pred = y_prob.max(dim=-1)
+                        thresholded_pred[max_probs < 0.5] = -1 
+
                         # Save the predictions and labels for later analysis.
                         predictions_test.append(y_hat.argmax(dim=-1).cpu().numpy())
                         labels_test.append(y_test.argmax(dim=-1).cpu().numpy())
+                        thresholded_predictions_test.append(thresholded_pred.cpu().numpy())
 
                 testing_loss = np.array(testing_loss).mean()
                 print(f'Testing loss: {testing_loss:7.4f}')
@@ -171,6 +181,7 @@ def train(train_ds, test_ds, val_ds):
                 # Calculate the accuracy.
                 predictions_test = np.concatenate(predictions_test)
                 labels_test = np.concatenate(labels_test)
+                thresholded_predictions_test = np.concatenate(thresholded_predictions_test)
 
                 # Calculate the amount of correct predictions
                 correct_predictions = np.equal(predictions_test, labels_test)
@@ -180,6 +191,13 @@ def train(train_ds, test_ds, val_ds):
 
                 # Plot confusiuon matrix from the predictions.
                 plot_confusion_matrix(labels_test, predictions_test, test_loader)
+
+                # Plot the confusion matrices for the thresholded predictions
+                # Filter out all the -1 values
+                valid_indices = thresholded_predictions_test != -1
+                filtered_predictions = thresholded_predictions_test[valid_indices]
+                filtered_labels = labels_test[valid_indices]
+                plot_confusion_matrix(filtered_labels, filtered_predictions, test_loader)
                 break
 
 # Train the model
